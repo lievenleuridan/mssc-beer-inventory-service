@@ -13,19 +13,20 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Component
 public class AllocationListener {
-
-    private final JmsTemplate jmsTemplate;
     private final AllocationService allocationService;
+    private final JmsTemplate jmsTemplate;
 
     @JmsListener(destination = JmsConfig.ALLOCATE_ORDER_QUEUE)
     public void listen(AllocateOrderRequest request){
         AllocateOrderResult.AllocateOrderResultBuilder builder = AllocateOrderResult.builder();
-        builder.beerOrderDto(request.getBeerOrderDto()).allocationError(false);
+        builder.beerOrderDto(request.getBeerOrderDto());
 
         try{
             Boolean allocationResult = allocationService.allocateOrder(request.getBeerOrderDto());
 
             builder.pendingInventory(!allocationResult);
+
+            builder.allocationError(false);
         } catch (Exception e){
             log.error("Allocation failed for Order Id:" + request.getBeerOrderDto().getId());
             builder.allocationError(true);
@@ -33,5 +34,6 @@ public class AllocationListener {
 
         jmsTemplate.convertAndSend(JmsConfig.ALLOCATE_ORDER_RESPONSE_QUEUE,
                 builder.build());
+
     }
 }
